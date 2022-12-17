@@ -1,6 +1,6 @@
 ## SDL_gesture
 
-SDL3 is removes the Gesture API that was available in SDL2, so as a migration
+SDL3 is removing the Gesture API that was available in SDL2, so as a migration
 path, we are providing an equivalent as a single-header library that you
 can drop into your SDL3-based project.
 
