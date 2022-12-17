@@ -47,7 +47,6 @@ static int eventWrite;
 static int colors[7] = { 0xFF, 0xFF00, 0xFF0000, 0xFFFF00, 0x00FFFF, 0xFF00FF, 0xFFFFFF };
 static int quitting = 0;
 static SDL_Window *g_window = NULL;
-static SDL_Renderer *g_renderer = NULL;
 
 
 typedef struct
@@ -304,7 +303,8 @@ int main(int argc, char *argv[])
 {
     SDL_Log("%s", usage);
 
-    if (SDL_CreateWindowAndRenderer(WIDTH, HEIGHT, 0, &g_window, &g_renderer) < 0) {
+    g_window = SDL_CreateWindow("test gesture", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, 0);
+    if (g_window == NULL) {
        return -1;
     }
 
@@ -321,9 +321,7 @@ int main(int argc, char *argv[])
 
     Gesture_Quit();
 
-    SDL_DestroyRenderer(g_renderer);
     SDL_DestroyWindow(g_window);
-
 
     return 0;
 }
