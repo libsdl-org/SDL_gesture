@@ -21,10 +21,8 @@ static const char *usage = "\n\
 
 #if defined(TESTGESTURE_SDL3)
 #include <SDL3/SDL.h>
-#include <SDL3/SDL_test.h>
 #else
 #include "SDL.h"
-#include "SDL_test.h"
 #endif
 
 #define SDL_GESTURE_IMPLEMENTATION 1
