@@ -1,7 +1,1 @@
-@PACKAGE_INIT@
-
-if(NOT TARGET SDL_gesture::SDL_gesture)
-    add_library(SDL_gesture INTERFACE)
-    target_include_directories(SDL_gesture INTERFACE "@PACKAGE_CMAKE_INSTALL_FULL_INCLUDEDIR@")
-    add_library(SDL_gesture::SDL_gesture ALIAS SDL_gesture)
-endif()
+include("${CMAKE_CURRENT_LIST_DIR}/SDL_gestureTargets.cmake")
