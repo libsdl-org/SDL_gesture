@@ -10,11 +10,14 @@
   freely.
 */
 
-/*  Usage:
- *  Spacebar to begin recording a gesture on all touches.
- *  s to save all touches into "./gestureSave"
- *  l to load all touches from "./gestureSave"
- */
+
+static const char *usage = "\n\
+    i: info about devices \n\
+    r: record a Gesture.(press 'r' before each new record)\n\
+    s: save gestures into 'gestureSave'file\n\
+    l: load 'gestureSave' file\n\
+    v: enable virtual touch. Touch events are synthetized when Mouse events occur\n\
+";
 
 #if defined(TESTGESTURE_SDL3)
 #include <SDL3/SDL.h>
@@ -41,11 +44,13 @@
 
 #define VERBOSE 0
 
-static SDLTest_CommonState *state;
 static SDL_Event events[EVENT_BUF_SIZE];
 static int eventWrite;
 static int colors[7] = { 0xFF, 0xFF00, 0xFF0000, 0xFFFF00, 0x00FFFF, 0xFF00FF, 0xFFFFFF };
 static int quitting = 0;
+static SDL_Window *g_window = NULL;
+static SDL_Renderer *g_renderer = NULL;
+
 
 typedef struct
 {
@@ -187,15 +192,22 @@ loop(void)
     int i;
 
     while (SDL_PollEvent(&u_event.event)) {
-        SDLTest_CommonEvent(state, &u_event.event, &quitting);
 
         /* Record _all_ events */
         events[eventWrite & (EVENT_BUF_SIZE - 1)] = u_event.event;
         eventWrite++;
 
         switch (u_event.event.type) {
+        case SDL_QUIT:
+           quitting = 1;
+           break;
+
         case SDL_KEYDOWN:
             switch (u_event.event.key.keysym.sym) {
+            case SDLK_ESCAPE:
+               quitting = 1;
+               break;
+
             case SDLK_i:
             {
                 for (i = 0; i < SDL_GetNumTouchDevices(); ++i) {
@@ -210,7 +222,7 @@ loop(void)
                 break;
             }
 
-            case SDLK_SPACE:
+            case SDLK_r:
                 Gesture_RecordGesture(-1);
                 break;
 
@@ -222,9 +234,20 @@ loop(void)
 
             case SDLK_l:
                 stream = SDL_RWFromFile("gestureSave", "r");
-                SDL_Log("Loaded: %i", Gesture_LoadDollarTemplates(-1, stream));
-                SDL_RWclose(stream);
+                if (stream) {
+                    SDL_Log("Loaded: %i", Gesture_LoadDollarTemplates(-1, stream));
+                    SDL_RWclose(stream);
+                } else {
+                    SDL_Log("Cannot load 'gestureSave' file");
+                }
                 break;
+
+            case SDLK_v:
+                /* Transform mouse event to touch events for testing without a touch screen */
+                SDL_SetHint(SDL_HINT_MOUSE_TOUCH_EVENTS, "1");
+                SDL_Log("SDL_HINT_MOUSE_TOUCH_EVENTS enabled");
+                break;
+
             }
             break;
 
@@ -270,11 +293,7 @@ loop(void)
         }
     }
 
-    for (i = 0; i < state->num_windows; ++i) {
-        if (state->windows[i]) {
-            DrawScreen(state->windows[i]);
-        }
-    }
+    DrawScreen(g_window);
 
 #ifdef __EMSCRIPTEN__
     if (quitting) {
@@ -285,32 +304,29 @@ loop(void)
 
 int main(int argc, char *argv[])
 {
-    state = SDLTest_CommonCreateState(argv, SDL_INIT_VIDEO);
-    if (state == NULL) {
-        return 1;
+    SDL_Log("%s", usage);
+
+    if (SDL_CreateWindowAndRenderer(WIDTH, HEIGHT, 0, &g_window, &g_renderer) < 0) {
+       return -1;
     }
+
     Gesture_Init();
-
-    state->window_title = "Gesture Test";
-    state->window_w = WIDTH;
-    state->window_h = HEIGHT;
-    state->skip_renderer = SDL_TRUE;
-
-    if (!SDLTest_CommonDefaultArgs(state, argc, argv) || !SDLTest_CommonInit(state)) {
-        Gesture_Quit();
-        SDLTest_CommonQuit(state);
-        return 1;
-    }
 
 #ifdef __EMSCRIPTEN__
     emscripten_set_main_loop(loop, 0, 1);
 #else
     while (!quitting) {
         loop();
+        SDL_Delay(20);
     }
 #endif
+
     Gesture_Quit();
-    SDLTest_CommonQuit(state);
+
+    SDL_DestroyRenderer(g_renderer);
+    SDL_DestroyWindow(g_window);
+
+
     return 0;
 }
 
