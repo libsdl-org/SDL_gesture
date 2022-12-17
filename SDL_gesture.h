@@ -31,6 +31,7 @@
 #elif SDL_VERSION_MAJOR == 2
 /* building against SDL2? Just use the built-in SDL2 implementation. */
 #define Gesture_Init() (0)
+#define Gesture_Quit()
 #define Gesture_ID SDL_GestureID
 #define Gesture_RecordGesture SDL_RecordGesture
 #define Gesture_SaveAllDollarTemplates SDL_SaveAllDollarTemplates
