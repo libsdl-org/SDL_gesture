@@ -77,7 +77,7 @@ typedef struct Gesture_DollarGestureEvent
     Uint32 type;
     Uint32 timestamp;
     SDL_TouchID touchId;
-    SDL_GestureID gestureId;
+    Gesture_ID gestureId;
     Uint32 numFingers;
     float error;
     float x;
@@ -137,7 +137,7 @@ extern int SDLCALL Gesture_SaveAllDollarTemplates(SDL_RWops *dst);
  * \sa SDL_LoadDollarTemplates
  * \sa SDL_SaveAllDollarTemplates
  */
-extern int SDLCALL Gesture_SaveDollarTemplate(SDL_GestureID gestureId,SDL_RWops *dst);
+extern int SDLCALL Gesture_SaveDollarTemplate(Gesture_ID gestureId,SDL_RWops *dst);
 
 /**
  * Load Dollar Gesture templates from a file.
@@ -206,7 +206,7 @@ static int SDLCALL *GestureEventWatch(void *userdata, SDL_Event *event)
     return 1;
 }
 
-int Gesture_Init(void)
+int SDLCALL Gesture_Init(void)
 {
     Gesture_Quit();
     SDL_AddEventWatch(GestureEventWatch, NULL);
@@ -295,7 +295,7 @@ int SDL_RecordGesture(SDL_TouchID touchId)
     return 1;
 }
 
-void Gesture_Quit(void)
+void SDLCALL Gesture_Quit(void)
 {
     SDL_DelEventWatch(GestureEventWatch, NULL);
     SDL_free(GestureTouches);
@@ -363,7 +363,7 @@ SDL_SaveAllDollarTemplates(SDL_RWops *dst)
 }
 
 DECLSPEC int SDLCALL
-SDL_SaveDollarTemplate(SDL_GestureID gestureId, SDL_RWops *dst)
+SDL_SaveDollarTemplate(Gesture_ID gestureId, SDL_RWops *dst)
 {
     int i, j;
     for (i = 0; i < GestureNumTouches; i++) {
@@ -442,7 +442,7 @@ SDL_LoadDollarTemplates(SDL_TouchID touchId, SDL_RWops *src)
 
     while (1) {
         GestureDollarTemplate templ;
-        const Sint64 bytes = sizeof(templ->path[0]) * GESTURE_DOLLARNPOINTS;
+        const Sint64 bytes = sizeof(templ.path[0]) * GESTURE_DOLLARNPOINTS;
 
         if (SDL_RWread(src, templ.path, bytes) < bytes) {
             if (loaded == 0) {
@@ -653,45 +653,53 @@ static float GestureDollarRecognize(const GestureDollarPath *path, int *bestTemp
 
 static void GestureSendMulti(GestureTouch *touch, float dTheta, float dDist)
 {
-    if (SDL_GetEventState(SDL_MULTIGESTURE) == SDL_ENABLE) {
+    if (SDL_GetEventState(GESTURE_MULTIGESTURE) == SDL_ENABLE) {
         SDL_Event event;
-        event.type = GESTURE_MULTIGESTURE;
-        event.common.timestamp = 0;
-        event.mgesture.touchId = touch->touchId;
-        event.mgesture.x = touch->centroid.x;
-        event.mgesture.y = touch->centroid.y;
-        event.mgesture.dTheta = dTheta;
-        event.mgesture.dDist = dDist;
-        event.mgesture.numFingers = touch->numDownFingers;
+        Gesture_MultiGestureEvent *mgesture = (Gesture_MultiGestureEvent *)&event;
+
+        mgesture->type = GESTURE_MULTIGESTURE;
+        mgesture->timestamp = 0;
+        mgesture->touchId = touch->touchId;
+        mgesture->x = touch->centroid.x;
+        mgesture->y = touch->centroid.y;
+        mgesture->dTheta = dTheta;
+        mgesture->dDist = dDist;
+        mgesture->numFingers = touch->numDownFingers;
         SDL_PushEvent(&event);
     }
 }
 
-static void GestureSendDollar(GestureTouch *touch, SDL_GestureID gestureId, float error)
+static void GestureSendDollar(GestureTouch *touch, Gesture_ID gestureId, float error)
 {
-    if (SDL_GetEventState(SDL_DOLLARGESTURE) == SDL_ENABLE) {
+    if (SDL_GetEventState(GESTURE_DOLLARGESTURE) == SDL_ENABLE) {
         SDL_Event event;
-        event.type = GESTURE_DOLLARGESTURE;
-        event.common.timestamp = 0;
-        event.dgesture.touchId = touch->touchId;
-        event.dgesture.x = touch->centroid.x;
-        event.dgesture.y = touch->centroid.y;
-        event.dgesture.gestureId = gestureId;
-        event.dgesture.error = error;
+        Gesture_DollarGestureEvent *dgesture = (Gesture_DollarGestureEvent *)&event;
+
+        dgesture->type = GESTURE_DOLLARGESTURE;
+        dgesture->timestamp = 0;
+        dgesture->touchId = touch->touchId;
+        dgesture->x = touch->centroid.x;
+        dgesture->y = touch->centroid.y;
+        dgesture->gestureId = gestureId;
+        dgesture->error = error;
         /* A finger came up to trigger this event. */
-        event.dgesture.numFingers = touch->numDownFingers + 1;
+        dgesture->numFingers = touch->numDownFingers + 1;
+
         SDL_PushEvent(&event);
     }
 }
 
-static void GestureSendDollarRecord(GestureTouch *touch, SDL_GestureID gestureId)
+static void GestureSendDollarRecord(GestureTouch *touch, Gesture_ID gestureId)
 {
-    if (SDL_GetEventState(SDL_DOLLARRECORD) == SDL_ENABLE) {
+    if (SDL_GetEventState(GESTURE_DOLLARRECORD) == SDL_ENABLE) {
         SDL_Event event;
-        event.type = GESTURE_DOLLARRECORD;
-        event.common.timestamp = 0;
-        event.dgesture.touchId = touch->touchId;
-        event.dgesture.gestureId = gestureId;
+        Gesture_DollarGestureEvent *dgesture = (Gesture_DollarGestureEvent *)&event;
+
+        dgesture->type = GESTURE_DOLLARRECORD;
+        dgesture->timestamp = 0;
+        dgesture->touchId = touch->touchId;
+        dgesture->gestureId = gestureId;
+
         SDL_PushEvent(&event);
     }
 }
