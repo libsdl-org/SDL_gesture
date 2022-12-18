@@ -7,7 +7,14 @@ can drop into your SDL3-based project.
 We do not make formal releases of this code; just grab the latest and drop
 it into your project!
 
-To use:
+# There's a lot of files in here
+
+You only need SDL_gesture.h ...all the other stuff, including the CMake
+project files, are for the test app, which helps us make sure the header
+works, but you do not need any of these files to use the library.
+
+
+# Usage:
 
 - Copy SDL_gesture.h into your project.
 - Wherever you need access to this functionality, `#include` the header,
