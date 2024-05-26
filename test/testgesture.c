@@ -19,11 +19,7 @@ static const char *usage = "\n\
     v: enable virtual touch. Touch events are synthetized when Mouse events occur\n\
 ";
 
-#if defined(TESTGESTURE_SDL3)
 #include <SDL3/SDL.h>
-#else
-#include "SDL.h"
-#endif
 
 #define SDL_GESTURE_IMPLEMENTATION 1
 #include "SDL_gesture.h"
@@ -78,7 +74,7 @@ setpix(SDL_Surface *screen, float _x, float _y, unsigned int col)
 
     pixmem32 = (Uint32 *)screen->pixels + y * screen->pitch / BPP + x;
 
-    SDL_memcpy(&colour, pixmem32, screen->format->BytesPerPixel);
+    SDL_memcpy(&colour, pixmem32, screen->format->bytes_per_pixel);
 
     SDL_GetRGB(colour, screen->format, &r, &g, &b);
 
@@ -143,7 +139,7 @@ DrawScreen(SDL_Window *window)
         return;
     }
 
-    SDL_FillRect(screen, NULL, SDL_MapRGB(screen->format, 75, 75, 75));
+    SDL_FillSurfaceRect(screen, NULL, SDL_MapRGB(screen->format, 75, 75, 75));
 
     /* draw Touch History */
     for (i = eventWrite; i < eventWrite + EVENT_BUF_SIZE; ++i) {
@@ -152,19 +148,19 @@ DrawScreen(SDL_Window *window)
         float x, y;
         unsigned int c, col;
 
-        if ((event->type == SDL_FINGERMOTION) ||
-            (event->type == SDL_FINGERDOWN) ||
-            (event->type == SDL_FINGERUP)) {
+        if ((event->type == SDL_EVENT_FINGER_MOTION) ||
+            (event->type == SDL_EVENT_FINGER_DOWN) ||
+            (event->type == SDL_EVENT_FINGER_UP)) {
             x = event->tfinger.x;
             y = event->tfinger.y;
 
             /* draw the touch: */
-            c = colors[event->tfinger.fingerId % 7];
+            c = colors[event->tfinger.fingerID % 7];
             col = ((unsigned int)(c * (0.1f + 0.85f))) | (unsigned int)(0xFF * age) << 24;
 
-            if (event->type == SDL_FINGERMOTION) {
+            if (event->type == SDL_EVENT_FINGER_MOTION) {
                 drawCircle(screen, x * screen->w, y * screen->h, 5, col);
-            } else if (event->type == SDL_FINGERDOWN) {
+            } else if (event->type == SDL_EVENT_FINGER_DOWN) {
                 drawCircle(screen, x * screen->w, y * screen->h, -10, col);
             }
         }
@@ -185,7 +181,7 @@ loop(void)
         Gesture_MultiGestureEvent mgesture;
         Gesture_DollarGestureEvent dgesture;
     } u_event;
-    SDL_RWops *stream;
+    SDL_IOStream *stream;
     int i;
 
     while (SDL_PollEvent(&u_event.event)) {
@@ -195,11 +191,11 @@ loop(void)
         eventWrite++;
 
         switch (u_event.event.type) {
-        case SDL_QUIT:
+        case SDL_EVENT_QUIT:
            quitting = 1;
            break;
 
-        case SDL_KEYDOWN:
+        case SDL_EVENT_KEY_DOWN:
             switch (u_event.event.key.keysym.sym) {
             case SDLK_ESCAPE:
                quitting = 1;
@@ -207,14 +203,17 @@ loop(void)
 
             case SDLK_i:
             {
-                for (i = 0; i < SDL_GetNumTouchDevices(); ++i) {
-                    const SDL_TouchID id = SDL_GetTouchDevice(i);
-#if SDL_VERSION_ATLEAST(2, 22, 0)
-                    const char *name = SDL_GetTouchName(i);
-#else
-                    const char *name = "<unknown>";
-#endif
-                    SDL_Log("Fingers Down on device %" SDL_PRIs64 " (%s): %d", id, name, SDL_GetNumTouchFingers(id));
+                SDL_TouchID *devices = SDL_GetTouchDevices(NULL);
+                if (devices) {
+                    for (i = 0; devices[i]; ++i) {
+                        const SDL_TouchID id = devices[i];
+                        const char *name = SDL_GetTouchDeviceName(id);
+                        int num_fingers;
+                        SDL_Finger **fingers = SDL_GetTouchFingers(id, &num_fingers);
+                        SDL_free(fingers);
+                        SDL_Log("Fingers Down on device %" SDL_PRIs64 " (%s): %d", id, name, num_fingers);
+                    }
+                    SDL_free(devices);
                 }
                 break;
             }
@@ -224,16 +223,16 @@ loop(void)
                 break;
 
             case SDLK_s:
-                stream = SDL_RWFromFile("gestureSave", "w");
+                stream = SDL_IOFromFile("gestureSave", "w");
                 SDL_Log("Wrote %i templates", Gesture_SaveAllDollarTemplates(stream));
-                SDL_RWclose(stream);
+                SDL_CloseIO(stream);
                 break;
 
             case SDLK_l:
-                stream = SDL_RWFromFile("gestureSave", "r");
+                stream = SDL_IOFromFile("gestureSave", "r");
                 if (stream) {
                     SDL_Log("Loaded: %i", Gesture_LoadDollarTemplates(-1, stream));
-                    SDL_RWclose(stream);
+                    SDL_CloseIO(stream);
                 } else {
                     SDL_Log("Cannot load 'gestureSave' file");
                 }
@@ -249,19 +248,19 @@ loop(void)
             break;
 
 #if VERBOSE
-        case SDL_FINGERMOTION:
-            SDL_Log("Finger: %" SDL_PRIs64 ", x: %f, y: %f", u_event.event.tfinger.fingerId,
+        case SDL_EVENT_FINGER_MOTION:
+            SDL_Log("Finger: %" SDL_PRIs64 ", x: %f, y: %f", u_event.event.tfinger.fingerID,
                     u_event.event.tfinger.x, u_event.event.tfinger.y);
             break;
 
-        case SDL_FINGERDOWN:
+        case SDL_EVENT_FINGER_DOWN:
             SDL_Log("Finger: %" SDL_PRIs64 " down - x: %f, y: %f",
-                    u_event.event.tfinger.fingerId, u_event.event.tfinger.x, u_event.event.tfinger.y);
+                    u_event.event.tfinger.fingerID, u_event.event.tfinger.x, u_event.event.tfinger.y);
             break;
 
-        case SDL_FINGERUP:
+        case SDL_EVENT_FINGER_UP:
             SDL_Log("Finger: %" SDL_PRIs64 " up - x: %f, y: %f",
-                    u_event.event.tfinger.fingerId, u_event.event.tfinger.x, u_event.event.tfinger.y);
+                    u_event.event.tfinger.fingerID, u_event.event.tfinger.x, u_event.event.tfinger.y);
             break;
 #endif
 
@@ -303,7 +302,7 @@ int main(int argc, char *argv[])
 {
     SDL_Log("%s", usage);
 
-    g_window = SDL_CreateWindow("test gesture", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, 0);
+    g_window = SDL_CreateWindow("test gesture", WIDTH, HEIGHT, 0);
     if (g_window == NULL) {
        return -1;
     }
