@@ -198,10 +198,10 @@ static SDL_bool GestureRecordAll = SDL_FALSE;
 
 static void GestureProcessEvent(const SDL_Event *event);
 
-static int SDLCALL GestureEventWatch(void *userdata, SDL_Event *event)
+static SDL_bool SDLCALL GestureEventWatch(void *userdata, SDL_Event *event)
 {
     GestureProcessEvent(event);
-    return 1;
+    return SDL_TRUE;
 }
 
 int Gesture_Init(void)
