@@ -296,7 +296,7 @@ int Gesture_RecordGesture(SDL_TouchID touchID)
 
 void Gesture_Quit(void)
 {
-    SDL_DelEventWatch(GestureEventWatch, NULL);
+    SDL_RemoveEventWatch(GestureEventWatch, NULL);
     SDL_free(GestureTouches);
     GestureTouches = NULL;
     GestureNumTouches = 0;
