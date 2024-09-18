@@ -188,20 +188,20 @@ typedef struct
     Uint16 numDownFingers;
     int numDollarTemplates;
     GestureDollarTemplate *dollarTemplate;
-    SDL_bool recording;
+    bool recording;
 } GestureTouch;
 
 static GestureTouch *GestureTouches = NULL;
 static int GestureNumTouches = 0;
-static SDL_bool GestureRecordAll = SDL_FALSE;
+static bool GestureRecordAll = false;
 
 
 static void GestureProcessEvent(const SDL_Event *event);
 
-static SDL_bool SDLCALL GestureEventWatch(void *userdata, SDL_Event *event)
+static bool SDLCALL GestureEventWatch(void *userdata, SDL_Event *event)
 {
     GestureProcessEvent(event);
-    return SDL_TRUE;
+    return true;
 }
 
 int Gesture_Init(void)
@@ -279,16 +279,16 @@ int Gesture_RecordGesture(SDL_TouchID touchID)
 	}
 
     if (touchID != 0) {
-        GestureRecordAll = SDL_TRUE;  /* !!! FIXME: this is never set back to SDL_FALSE anywhere, that's probably a bug. */
+        GestureRecordAll = true;  /* !!! FIXME: this is never set back to false anywhere, that's probably a bug. */
         for (i = 0; i < GestureNumTouches; i++) {
-            GestureTouches[i].recording = SDL_TRUE;
+            GestureTouches[i].recording = true;
         }
     } else {
         GestureTouch *touch = GestureGetTouch(touchID);
         if (!touch) {
             return 0;  /* bogus touchid */
         }
-        touch->recording = SDL_TRUE;
+        touch->recording = true;
     }
 
     return 1;
@@ -300,7 +300,7 @@ void Gesture_Quit(void)
     SDL_free(GestureTouches);
     GestureTouches = NULL;
     GestureNumTouches = 0;
-    GestureRecordAll = SDL_FALSE;
+    GestureRecordAll = false;
 }
 
 static unsigned long GestureHashDollar(SDL_FPoint *points)
@@ -530,7 +530,7 @@ static float GestureBestDollarDifference(SDL_FPoint *points, SDL_FPoint *templ)
 }
 
 /* `path` contains raw points, plus (possibly) the calculated length */
-static int GestureDollarNormalize(const GestureDollarPath *path, SDL_FPoint *points, SDL_bool is_recording)
+static int GestureDollarNormalize(const GestureDollarPath *path, SDL_FPoint *points, bool is_recording)
 {
     int i;
     float interval;
@@ -636,7 +636,7 @@ static float GestureDollarRecognize(const GestureDollarPath *path, int *bestTemp
 
     SDL_memset(points, 0, sizeof(points));
 
-    GestureDollarNormalize(path, points, SDL_FALSE);
+    GestureDollarNormalize(path, points, false);
 
     /* PrintPath(points); */
     *bestTempl = -1;
@@ -727,13 +727,13 @@ static void GestureProcessEvent(const SDL_Event *event)
             inTouch->numDownFingers--;
 
             if (inTouch->recording) {
-                inTouch->recording = SDL_FALSE;
-                GestureDollarNormalize(&inTouch->dollarPath, path, SDL_TRUE);
+                inTouch->recording = false;
+                GestureDollarNormalize(&inTouch->dollarPath, path, true);
                 /* PrintPath(path); */
                 if (GestureRecordAll) {
                     index = GestureAddDollar(NULL, path);
                     for (i = 0; i < GestureNumTouches; i++) {
-                        GestureTouches[i].recording = SDL_FALSE;
+                        GestureTouches[i].recording = false;
                     }
                 } else {
                     index = GestureAddDollar(inTouch, path);
