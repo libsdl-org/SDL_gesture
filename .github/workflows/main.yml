@@ -23,48 +23,39 @@ jobs:
 
     steps:
     - name: Set up MSYS2
-      if: matrix.platform.shell == 'msys2 {0}'
+      if: ${{ matrix.platform.shell == 'msys2 {0}' }}
       uses: msys2/setup-msys2@v2
       with:
         msystem: ${{ matrix.platform.msystem }}
         install: >-
-          ${{ matrix.platform.msys-env }}-SDL2
           ${{ matrix.platform.msys-env }}-cmake
           ${{ matrix.platform.msys-env }}-gcc
           ${{ matrix.platform.msys-env }}-ninja
     - name: Setup Macos dependencies
-      if: runner.os == 'macOS'
+      if: ${{ runner.os == 'macOS' }}
       run: |
         brew install \
-          sdl2 \
           ninja \
           ${NULL+}
     - name: Setup Linux dependencies
-      if: runner.os == 'Linux'
+      if: ${{ runner.os == 'Linux' }}
       run: |
         sudo apt-get update
         sudo apt-get -y install \
           cmake \
-          libsdl2-dev \
           ninja-build \
           pkg-config \
           ${NULL+}
-    - uses: actions/checkout@v3
-    - name: Setup MSVC dependencies
-      if: "matrix.platform.msvc"
-      shell: pwsh
-      run: |
-        echo "::group::Downloading SDL"
-        .github/fetch_sdl_vc.ps1
-        echo "SDL2_DIR=$Env:GITHUB_WORKSPACE/SDL2-devel-VC" >> $Env:GITHUB_ENV
-        echo "::endgroup::"
-    - name: Setup Ninja for MSVC
-      if: "matrix.platform.msvc"
-      uses: ashutoshvarma/setup-ninja@master
+    - uses: libsdl-org/setup-sdl@main
       with:
-        version: 1.10.2
+        version: 2-head
+    - uses: libsdl-org/setup-sdl@main
+      with:
+        version: 3-head
+    - uses: actions/checkout@v3
+    - uses: seanmiddleditch/gha-setup-ninja@master
     - uses: ilammy/msvc-dev-cmd@v1
-      if: "matrix.platform.msvc"
+      if: ${{ matrix.platform.msvc }}
       with:
         arch: x64
 
@@ -73,7 +64,8 @@ jobs:
         cmake -S . -B build \
           -DSDLGESTURE_TESTS=ON \
           -DCMAKE_BUILD_TYPE=Release \
-          -DCMAKE_INSTALL_PREFIX=prefix
+          -DCMAKE_INSTALL_PREFIX=prefix \
+          -DCMAKE_POLICY_DEFAULT_CMP0074=NEW
     - name: Build (CMake)
       run: |
         cmake --build build/ --config Release --parallel --verbose
@@ -88,5 +80,6 @@ jobs:
       run: |
         cmake -S test -B cmake_config_build \
           -DCMAKE_BUILD_TYPE=Release \
-          -DCMAKE_PREFIX_PATH="$PWD/prefix"
+          -DCMAKE_PREFIX_PATH="$PWD/prefix" \
+          -DCMAKE_POLICY_DEFAULT_CMP0074=NEW
         cmake --build cmake_config_build --verbose --config Release
