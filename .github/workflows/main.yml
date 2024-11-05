@@ -49,7 +49,7 @@ jobs:
           ninja-build \
           pkg-config \
           ${NULL+}
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Setup MSVC dependencies
       if: "matrix.platform.msvc"
       shell: pwsh
