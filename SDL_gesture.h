@@ -63,7 +63,8 @@ typedef Sint64 Gesture_ID;
 typedef struct Gesture_MultiGestureEvent
 {
     Uint32 type;
-    Uint32 timestamp;
+    Uint32 reserved;
+    Uint64 timestamp;
     SDL_TouchID touchID;
     float dTheta;
     float dDist;
@@ -76,7 +77,8 @@ typedef struct Gesture_MultiGestureEvent
 typedef struct Gesture_DollarGestureEvent
 {
     Uint32 type;
-    Uint32 timestamp;
+    Uint32 reserved;
+    Uint64 timestamp;
     SDL_TouchID touchID;
     Gesture_ID gestureId;
     Uint32 numFingers;
@@ -316,7 +318,7 @@ static unsigned long GestureHashDollar(SDL_FPoint *points)
 
 static int GestureSaveTemplate(GestureDollarTemplate *templ, SDL_IOStream *dst)
 {
-    const Sint64 bytes = sizeof(templ->path[0]) * GESTURE_DOLLARNPOINTS;
+    const size_t bytes = sizeof(templ->path[0]) * GESTURE_DOLLARNPOINTS;
 
     if (dst == NULL) {
         return 0;
@@ -441,7 +443,7 @@ Gesture_LoadDollarTemplates(SDL_TouchID touchID, SDL_IOStream *src)
 
     while (1) {
         GestureDollarTemplate templ;
-        const Sint64 bytes = sizeof(templ.path[0]) * GESTURE_DOLLARNPOINTS;
+        const size_t bytes = sizeof(templ.path[0]) * GESTURE_DOLLARNPOINTS;
 
         if (SDL_ReadIO(src, templ.path, bytes) < bytes) {
             if (loaded == 0) {

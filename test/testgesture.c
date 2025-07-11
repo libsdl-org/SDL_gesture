@@ -16,7 +16,7 @@ static const char *usage = "\n\
     r: record a Gesture.(press 'r' before each new record)\n\
     s: save gestures into 'gestureSave'file\n\
     l: load 'gestureSave' file\n\
-    v: enable virtual touch. Touch events are synthetized when Mouse events occur\n\
+    v: enable virtual touch. Touch events are synthesized when Mouse events occur\n\
 ";
 
 #include <SDL3/SDL.h>
@@ -58,8 +58,7 @@ typedef struct
 
 static Knob knob = { 0.0f, 0.1f, { 0.0f, 0.0f } };
 
-static void
-setpix(SDL_Surface *screen, float _x, float _y, unsigned int col)
+static void setpix(SDL_Surface *screen, const SDL_PixelFormatDetails *format, float _x, float _y, unsigned int col)
 {
     Uint32 *pixmem32;
     Uint32 colour;
@@ -74,9 +73,9 @@ setpix(SDL_Surface *screen, float _x, float _y, unsigned int col)
 
     pixmem32 = (Uint32 *)screen->pixels + y * screen->pitch / BPP + x;
 
-    SDL_memcpy(&colour, pixmem32, screen->format->bytes_per_pixel);
+    SDL_memcpy(&colour, pixmem32, format->bytes_per_pixel);
 
-    SDL_GetRGB(colour, screen->format, &r, &g, &b);
+    SDL_GetRGB(colour, format, NULL, &r, &g, &b);
 
     /* r = 0;g = 0; b = 0; */
     a = (float)((col >> 24) & 0xFF);
@@ -88,44 +87,44 @@ setpix(SDL_Surface *screen, float _x, float _y, unsigned int col)
     r = (Uint8)(r * (1 - a) + ((col >> 16) & 0xFF) * a);
     g = (Uint8)(g * (1 - a) + ((col >> 8) & 0xFF) * a);
     b = (Uint8)(b * (1 - a) + ((col >> 0) & 0xFF) * a);
-    colour = SDL_MapRGB(screen->format, r, g, b);
+    colour = SDL_MapRGB(format, NULL, r, g, b);
 
     *pixmem32 = colour;
 }
 
 #if 0 /* unused */
 static void
-drawLine(SDL_Surface *screen, float x0, float y0, float x1, float y1, unsigned int col)
+drawLine(SDL_Surface *screen, const SDL_PixelFormatDetails *format, float x0, float y0, float x1, float y1, unsigned int col)
 {
     float t;
     for (t = 0; t < 1; t += (float) (1.0f / SDL_max(SDL_fabs(x0 - x1), SDL_fabs(y0 - y1)))) {
-        setpix(screen, x1 + t * (x0 - x1), y1 + t * (y0 - y1), col);
+        setpix(screen, format, x1 + t * (x0 - x1), y1 + t * (y0 - y1), col);
     }
 }
 #endif
 
 static void
-drawCircle(SDL_Surface *screen, float x, float y, float r, unsigned int c)
+drawCircle(SDL_Surface *screen, const SDL_PixelFormatDetails *format, float x, float y, float r, unsigned int c)
 {
     float tx, ty, xr;
     for (ty = (float)-SDL_fabs(r); ty <= (float)SDL_fabs((int)r); ty++) {
         xr = (float)SDL_sqrt(r * r - ty * ty);
         if (r > 0) { /* r > 0 ==> filled circle */
             for (tx = -xr + 0.5f; tx <= xr - 0.5f; tx++) {
-                setpix(screen, x + tx, y + ty, c);
+                setpix(screen, format, x + tx, y + ty, c);
             }
         } else {
-            setpix(screen, x - xr + 0.5f, y + ty, c);
-            setpix(screen, x + xr - 0.5f, y + ty, c);
+            setpix(screen, format, x - xr + 0.5f, y + ty, c);
+            setpix(screen, format, x + xr - 0.5f, y + ty, c);
         }
     }
 }
 
 static void
-drawKnob(SDL_Surface *screen, const Knob *k)
+drawKnob(SDL_Surface *screen, const SDL_PixelFormatDetails *format, const Knob *k)
 {
-    drawCircle(screen, k->p.x * screen->w, k->p.y * screen->h, k->r * screen->w, 0xFFFFFF);
-    drawCircle(screen, (k->p.x + k->r / 2 * SDL_cosf(k->ang)) * screen->w,
+    drawCircle(screen, format, k->p.x * screen->w, k->p.y * screen->h, k->r * screen->w, 0xFFFFFF);
+    drawCircle(screen, format, (k->p.x + k->r / 2 * SDL_cosf(k->ang)) * screen->w,
                (k->p.y + k->r / 2 * SDL_sinf(k->ang)) * screen->h, k->r / 4 * screen->w, 0);
 }
 
@@ -133,13 +132,14 @@ static void
 DrawScreen(SDL_Window *window)
 {
     SDL_Surface *screen = SDL_GetWindowSurface(window);
+    const SDL_PixelFormatDetails *format = SDL_GetPixelFormatDetails(screen->format);
     int i;
 
     if (screen == NULL) {
         return;
     }
 
-    SDL_FillSurfaceRect(screen, NULL, SDL_MapRGB(screen->format, 75, 75, 75));
+    SDL_FillSurfaceRect(screen, NULL, SDL_MapRGB(format, NULL, 75, 75, 75));
 
     /* draw Touch History */
     for (i = eventWrite; i < eventWrite + EVENT_BUF_SIZE; ++i) {
@@ -159,15 +159,15 @@ DrawScreen(SDL_Window *window)
             col = ((unsigned int)(c * (0.1f + 0.85f))) | (unsigned int)(0xFF * age) << 24;
 
             if (event->type == SDL_EVENT_FINGER_MOTION) {
-                drawCircle(screen, x * screen->w, y * screen->h, 5, col);
+                drawCircle(screen, format, x * screen->w, y * screen->h, 5, col);
             } else if (event->type == SDL_EVENT_FINGER_DOWN) {
-                drawCircle(screen, x * screen->w, y * screen->h, -10, col);
+                drawCircle(screen, format, x * screen->w, y * screen->h, -10, col);
             }
         }
     }
 
     if (knob.p.x > 0) {
-        drawKnob(screen, &knob);
+        drawKnob(screen, format, &knob);
     }
 
     SDL_UpdateWindowSurface(window);
@@ -196,12 +196,12 @@ loop(void)
            break;
 
         case SDL_EVENT_KEY_DOWN:
-            switch (u_event.event.key.keysym.sym) {
+            switch (u_event.event.key.key) {
             case SDLK_ESCAPE:
                quitting = 1;
                break;
 
-            case SDLK_i:
+            case SDLK_I:
             {
                 SDL_TouchID *devices = SDL_GetTouchDevices(NULL);
                 if (devices) {
@@ -218,17 +218,17 @@ loop(void)
                 break;
             }
 
-            case SDLK_r:
+            case SDLK_R:
                 Gesture_RecordGesture(-1);
                 break;
 
-            case SDLK_s:
+            case SDLK_S:
                 stream = SDL_IOFromFile("gestureSave", "w");
                 SDL_Log("Wrote %i templates", Gesture_SaveAllDollarTemplates(stream));
                 SDL_CloseIO(stream);
                 break;
 
-            case SDLK_l:
+            case SDLK_L:
                 stream = SDL_IOFromFile("gestureSave", "r");
                 if (stream) {
                     SDL_Log("Loaded: %i", Gesture_LoadDollarTemplates(-1, stream));
@@ -238,7 +238,7 @@ loop(void)
                 }
                 break;
 
-            case SDLK_v:
+            case SDLK_V:
                 /* Transform mouse event to touch events for testing without a touch screen */
                 SDL_SetHint(SDL_HINT_MOUSE_TOUCH_EVENTS, "1");
                 SDL_Log("SDL_HINT_MOUSE_TOUCH_EVENTS enabled");
