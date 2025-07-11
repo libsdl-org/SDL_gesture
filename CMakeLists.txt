@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.0...4.0)
 project(SDL_gesture VERSION 1.0.0 LANGUAGES C)
 
 include(CMakePackageConfigHelpers)
