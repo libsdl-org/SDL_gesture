@@ -762,6 +762,22 @@ static void GestureProcessEvent(const SDL_Event *event)
                 inTouch->centroid.x = (inTouch->centroid.x * (inTouch->numDownFingers + 1) - x) / inTouch->numDownFingers;
                 inTouch->centroid.y = (inTouch->centroid.y * (inTouch->numDownFingers + 1) - y) / inTouch->numDownFingers;
             }
+        } else if (event->type == SDL_EVENT_FINGER_CANCELED) {
+            inTouch->numDownFingers--;
+
+            if (inTouch->recording) {
+                inTouch->recording = false;
+                if (GestureRecordAll) {
+                    for (i = 0; i < GestureNumTouches; i++) {
+                        GestureTouches[i].recording = false;
+                    }
+                }
+            }
+
+            if (inTouch->numDownFingers > 0) {
+                inTouch->centroid.x = (inTouch->centroid.x * (inTouch->numDownFingers + 1) - x) / inTouch->numDownFingers;
+                inTouch->centroid.y = (inTouch->centroid.y * (inTouch->numDownFingers + 1) - y) / inTouch->numDownFingers;
+            }
         } else if (event->type == SDL_EVENT_FINGER_MOTION) {
             const float dx = event->tfinger.dx;
             const float dy = event->tfinger.dy;
