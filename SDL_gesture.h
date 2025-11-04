@@ -179,7 +179,7 @@ typedef struct
 typedef struct
 {
     SDL_FPoint path[GESTURE_DOLLARNPOINTS];
-    unsigned long hash;
+    Uint64 hash;
 } GestureDollarTemplate;
 
 typedef struct
@@ -305,13 +305,13 @@ void Gesture_Quit(void)
     GestureRecordAll = false;
 }
 
-static unsigned long GestureHashDollar(SDL_FPoint *points)
+static Uint64 GestureHashDollar(SDL_FPoint *points)
 {
-    unsigned long hash = 5381;
+    Uint64 hash = 5381;
     int i;
     for (i = 0; i < GESTURE_DOLLARNPOINTS; i++) {
-        hash = ((hash << 5) + hash) + (unsigned long)points[i].x;
-        hash = ((hash << 5) + hash) + (unsigned long)points[i].y;
+        hash = ((hash << 5) + hash) + (Uint64)points[i].x;
+        hash = ((hash << 5) + hash) + (Uint64)points[i].y;
     }
     return hash;
 }
@@ -370,7 +370,7 @@ Gesture_SaveDollarTemplate(Gesture_ID gestureId, SDL_IOStream *dst)
     for (i = 0; i < GestureNumTouches; i++) {
         GestureTouch *touch = &GestureTouches[i];
         for (j = 0; j < touch->numDollarTemplates; j++) {
-            if (touch->dollarTemplate[j].hash == gestureId) {
+            if (touch->dollarTemplate[j].hash == (Uint64)gestureId) {
                 return GestureSaveTemplate(&touch->dollarTemplate[j], dst);
             }
         }
@@ -742,7 +742,8 @@ static void GestureProcessEvent(const SDL_Event *event)
                 }
 
                 if (index >= 0) {
-                    GestureSendDollarRecord(inTouch, inTouch->dollarTemplate[index].hash);
+                    Gesture_ID gestureId = (Gesture_ID)inTouch->dollarTemplate[index].hash;
+                    GestureSendDollarRecord(inTouch, gestureId);
                 } else {
                     GestureSendDollarRecord(inTouch, -1);
                 }
@@ -751,7 +752,7 @@ static void GestureProcessEvent(const SDL_Event *event)
                 const float error = GestureDollarRecognize(&inTouch->dollarPath, &bestTempl, inTouch);
                 if (bestTempl >= 0) {
                     /* Send Event */
-                    const unsigned long gestureId = inTouch->dollarTemplate[bestTempl].hash;
+                    Gesture_ID gestureId = (Gesture_ID)inTouch->dollarTemplate[bestTempl].hash;
                     GestureSendDollar(inTouch, gestureId, error);
                     /* printf ("%s\n",);("Dollar error: %f\n",error); */
                 }
