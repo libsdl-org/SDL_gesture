@@ -422,6 +422,49 @@ static int GestureAddDollar(GestureTouch *inTouch, SDL_FPoint *path)
     return GestureAddDollar_one(inTouch, path);
 }
 
+static void SDL_RemoveDollarTemplate_one(SDL_GestureTouch* inTouch, int index)
+{
+    if (index < inTouch->numDollarTemplates - 1) {
+        SDL_memmove(&inTouch->dollarTemplate[index], &inTouch->dollarTemplate[index + 1],
+            (inTouch->numDollarTemplates - 1 - index) * sizeof(SDL_DollarTemplate));
+    }
+    if (inTouch->numDollarTemplates > 1) {
+        inTouch->dollarTemplate = SDL_realloc(inTouch->dollarTemplate,
+            (inTouch->numDollarTemplates - 1) * sizeof(SDL_DollarTemplate));
+    }
+    else {
+        SDL_free(inTouch->dollarTemplate);
+        inTouch->dollarTemplate = NULL;
+    }
+    --inTouch->numDollarTemplates;
+}
+
+int SDL_RemoveDollarTemplate(SDL_GestureID gestureId)
+{
+    int i, j, ret = 0;
+    for (i = 0; i < SDL_numGestureTouches; i++) {
+        SDL_GestureTouch *touch = &SDL_gestureTouch[i];
+        for (j = 0; j < touch->numDollarTemplates; j++) {
+            if (touch->dollarTemplate[j].hash == (Uint64)gestureId) {
+                SDL_RemoveDollarTemplate_one(touch, j);
+                ret = 1;
+            }
+        }
+    }
+    return ret;
+}
+
+void SDL_RemoveAllDollarTemplates(void)
+{
+    int i;
+    for (i = 0; i < SDL_numGestureTouches; i++) {
+        SDL_GestureTouch *touch = &SDL_gestureTouch[i];
+        SDL_free(touch->dollarTemplate);
+        touch->dollarTemplate = NULL;
+        touch->numDollarTemplates = 0;
+    }
+}
+
 SDL_DECLSPEC int SDLCALL
 Gesture_LoadDollarTemplates(SDL_TouchID touchID, SDL_IOStream *src)
 {
