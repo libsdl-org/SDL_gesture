@@ -422,15 +422,15 @@ static int GestureAddDollar(GestureTouch *inTouch, SDL_FPoint *path)
     return GestureAddDollar_one(inTouch, path);
 }
 
-static void SDL_RemoveDollarTemplate_one(SDL_GestureTouch* inTouch, int index)
+static void SDL_RemoveDollarTemplate_one(GestureTouch* inTouch, int index)
 {
     if (index < inTouch->numDollarTemplates - 1) {
         SDL_memmove(&inTouch->dollarTemplate[index], &inTouch->dollarTemplate[index + 1],
-            (inTouch->numDollarTemplates - 1 - index) * sizeof(SDL_DollarTemplate));
+            (inTouch->numDollarTemplates - 1 - index) * sizeof(GestureDollarTemplate));
     }
     if (inTouch->numDollarTemplates > 1) {
         inTouch->dollarTemplate = SDL_realloc(inTouch->dollarTemplate,
-            (inTouch->numDollarTemplates - 1) * sizeof(SDL_DollarTemplate));
+            (inTouch->numDollarTemplates - 1) * sizeof(GestureDollarTemplate));
     }
     else {
         SDL_free(inTouch->dollarTemplate);
@@ -439,11 +439,11 @@ static void SDL_RemoveDollarTemplate_one(SDL_GestureTouch* inTouch, int index)
     --inTouch->numDollarTemplates;
 }
 
-int SDL_RemoveDollarTemplate(SDL_GestureID gestureId)
+int SDL_RemoveDollarTemplate(Gesture_ID gestureId)
 {
     int i, j, ret = 0;
-    for (i = 0; i < SDL_numGestureTouches; i++) {
-        SDL_GestureTouch *touch = &SDL_gestureTouch[i];
+    for (i = 0; i < GestureNumTouches; i++) {
+        GestureTouch *touch = &GestureTouches[i];
         for (j = 0; j < touch->numDollarTemplates; j++) {
             if (touch->dollarTemplate[j].hash == (Uint64)gestureId) {
                 SDL_RemoveDollarTemplate_one(touch, j);
@@ -457,8 +457,8 @@ int SDL_RemoveDollarTemplate(SDL_GestureID gestureId)
 void SDL_RemoveAllDollarTemplates(void)
 {
     int i;
-    for (i = 0; i < SDL_numGestureTouches; i++) {
-        SDL_GestureTouch *touch = &SDL_gestureTouch[i];
+    for (i = 0; i < GestureNumTouches; i++) {
+        GestureTouch *touch = &GestureTouches[i];
         SDL_free(touch->dollarTemplate);
         touch->dollarTemplate = NULL;
         touch->numDollarTemplates = 0;
