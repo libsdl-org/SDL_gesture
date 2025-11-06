@@ -22,71 +22,50 @@ jobs:
         - { name: Macos,             os: macos-latest,   shell: sh }
 
     steps:
+    - uses: actions/checkout@v5
+    - name: Set up ninja
+      if: ${{ !contains(matrix.platform.shell, 'msys2') }}
+      uses: ./.github/actions/setup-ninja
+
+    - uses: ilammy/msvc-dev-cmd@v1
+      if: "matrix.platform.msvc"
+      with:
+          arch: x64
     - name: Set up MSYS2
       if: matrix.platform.shell == 'msys2 {0}'
       uses: msys2/setup-msys2@v2
       with:
         msystem: ${{ matrix.platform.msystem }}
         install: >-
-          ${{ matrix.platform.msys-env }}-SDL2
           ${{ matrix.platform.msys-env }}-cmake
           ${{ matrix.platform.msys-env }}-gcc
           ${{ matrix.platform.msys-env }}-ninja
-    - name: Setup Macos dependencies
-      if: runner.os == 'macOS'
-      run: |
-        brew install \
-          sdl2 \
-          ninja \
-          ${NULL+}
-    - name: Setup Linux dependencies
-      if: runner.os == 'Linux'
-      run: |
-        sudo apt-get update
-        sudo apt-get -y install \
-          cmake \
-          libsdl2-dev \
-          ninja-build \
-          pkg-config \
-          ${NULL+}
-    - uses: actions/checkout@v4
-    - name: Setup MSVC dependencies
-      if: "matrix.platform.msvc"
-      shell: pwsh
-      run: |
-        echo "::group::Downloading SDL"
-        .github/fetch_sdl_vc.ps1
-        echo "SDL2_DIR=$Env:GITHUB_WORKSPACE/SDL2-devel-VC" >> $Env:GITHUB_ENV
-        echo "::endgroup::"
-    - name: Setup Ninja for MSVC
-      if: "matrix.platform.msvc"
-      uses: ashutoshvarma/setup-ninja@master
+    - name: Set up SDL3
+      uses: libsdl-org/setup-sdl@main
       with:
-        version: 1.10.2
-    - uses: ilammy/msvc-dev-cmd@v1
-      if: "matrix.platform.msvc"
-      with:
-        arch: x64
+        cmake-arguments: '-DSDL_X11=OFF -DSDL_WAYLAND=OFF -DSDL_UNIX_CONSOLE_BUILD=ON'  # For ci purposes, we're ok with a SDL3 without X11/Wayland
+        cmake-generator: Ninja
+        version: 3-head
+        shell: ${{ matrix.platform.shell }}
 
     - name: Configure (CMake)
       run: |
-        cmake -S . -B build \
+        cmake -S . -B build -GNinja \
           -DSDLGESTURE_TESTS=ON \
-          -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
           -DCMAKE_INSTALL_PREFIX=prefix
     - name: Build (CMake)
       run: |
-        cmake --build build/ --config Release --parallel --verbose
+        cmake --build build/ --parallel --verbose
     - name: Install (CMake)
       run: |
         set -eu
-        rm -fr prefix_cmake
-        cmake --install build/ --config Release
+        cmake --install build/
         ( cd prefix; find . ) | LC_ALL=C sort -u
 
     - name: Verify CMake configuration files
       run: |
-        cmake -S test -B cmake_config_build \
-          -DCMAKE_BUILD_TYPE=Release \
+        cmake -S test -B cmake_config_build -GNinja \
+          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
           -DCMAKE_PREFIX_PATH="$PWD/prefix"
         cmake --build cmake_config_build --verbose --config Release
